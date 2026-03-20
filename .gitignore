@@ -1,36 +1,15 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# 微信开发者工具缓存
 .DS_Store
-*.pem
+node_modules/
+.miniprogram
+project.private.config.json
+project.config.json
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# 临时文件
+*.tmp
+*.log
+*.cache
 
-# local env files
-.env*.local
-.env
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# 编译输出
+dist/
+build/
