@@ -30,19 +30,20 @@ class Paddle {
    * 更新球拍位置（玩家控制）- 丝滑跟随
    * @param {number} deltaTime - 时间增量（秒）
    * @param {number} targetX - 目标X坐标
+   * @param {number} screenWidth - 屏幕宽度
    */
-  update(deltaTime, targetX) {
+  update(deltaTime, targetX, screenWidth) {
     if (this.isAI) return;
 
     // 使用指数平滑插值实现丝滑移动
-    // factor 越大移动越快（0.1 = 慢丝滑，0.5 = 快跟手）
-    const smoothFactor = 0.15;
+    // factor 越大移动越快（0.1 = 慢丝滑，0.5 = 快跟手，增加到 0.45 让跟手更及时不黏腻）
+    const smoothFactor = 0.45;
     const dx = targetX - this.x;
     this.x += dx * smoothFactor;
 
     // 边界约束
     const halfWidth = this.width / 2;
-    this.x = Math.max(halfWidth, Math.min(gameState.screenWidth - halfWidth, this.x));
+    this.x = Math.max(halfWidth, Math.min(screenWidth - halfWidth, this.x));
 
     // 更新 vx 用于旋转效果
     this.vx = dx * smoothFactor * 60;
@@ -53,8 +54,9 @@ class Paddle {
    * @param {number} deltaTime - 时间增量（秒）
    * @param {number} targetX - 目标X坐标
    * @param {number} maxSpeed - 最大移动速度
+   * @param {number} screenWidth - 屏幕宽度
    */
-  updateAI(deltaTime, targetX, maxSpeed) {
+  updateAI(deltaTime, targetX, maxSpeed, screenWidth) {
     if (!this.isAI) return;
 
     this.targetX = targetX;
@@ -67,7 +69,7 @@ class Paddle {
 
     // 边界约束
     const halfWidth = this.width / 2;
-    this.x = Math.max(halfWidth, Math.min(gameState.screenWidth - halfWidth, this.x));
+    this.x = Math.max(halfWidth, Math.min(screenWidth - halfWidth, this.x));
   }
 
   /**

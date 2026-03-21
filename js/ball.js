@@ -134,11 +134,11 @@ class Ball {
     // 确保球在球拍外侧（防止穿透）
     const bounds = paddle.getBounds();
     if (this.vy < 0) {
-      // 球向上飞，在球拍下方
-      this.y = bounds.bottom + this.radius + 2;
-    } else {
-      // 球向下飞，在球拍上方
+      // 球向上飞（刚被底部玩家击中），所以球的实际物理位置应在球拍顶部上方
       this.y = bounds.top - this.radius - 2;
+    } else {
+      // 球向下飞（刚被顶部AI击中），所以球的实际物理位置应在球拍底部下方
+      this.y = bounds.bottom + this.radius + 2;
     }
   }
 
@@ -148,17 +148,23 @@ class Ball {
    * @returns {string|null} 得分方或null（不计分，只限制位置）
    */
   bounceOffWalls(screenWidth) {
+    const margin = screenWidth * 0.04;
     const bounds = {
-      left: 30,
-      right: screenWidth - 30
+      left: margin,
+      right: screenWidth - margin
     };
 
-    // 球碰到两侧限制直行，不反弹，不丢分
-    if (this.x - this.radius < bounds.left) {
-      this.x = bounds.left + this.radius;
-    } else if (this.x + this.radius > bounds.right) {
+    // 球碰到两侧壁后，随机方向反弹到对向（不会贴边直行）
+    if (this.x - this.radius <= bounds.left) {
+      this.x = bounds.left + this.radius; // 防穿模
+      // 撞左墙，强制向右反弹。保留部分横向动能并叠加随机偏向角速度
+      this.vx = Math.max(150, Math.abs(this.vx) * 0.6 + Math.random() * 200);
+    } else if (this.x + this.radius >= bounds.right) {
       this.x = bounds.right - this.radius;
+      // 撞右墙，强制向左反弹
+      this.vx = -Math.max(150, Math.abs(this.vx) * 0.6 + Math.random() * 200);
     }
+
     return null;
   }
 
@@ -203,13 +209,13 @@ class Ball {
    * @returns {string|null} 得分方或null
    */
   checkOutOfBounds(screenHeight) {
-    // 球完全越过球台底部（玩家未能接住）
-    if (this.y - this.radius > screenHeight * 0.85 + 30) {
+    // 球完全越过底线（玩家未能接住），底部基线为 0.92
+    if (this.y - this.radius > screenHeight * 0.96) {
       return 'ai';
     }
 
-    // 球完全越过球台顶部（AI未能接住）
-    if (this.y + this.radius < screenHeight * 0.15 - 30) {
+    // 球完全越过顶线（AI未能接住），顶部基线为 0.08
+    if (this.y + this.radius < screenHeight * 0.04) {
       return 'player';
     }
 

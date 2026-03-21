@@ -46,14 +46,15 @@ function drawButton(ctx, x, y, width, height, text, color, textColor = '#FFFFFF'
 /**
  * 绘制比赛比分面板
  */
-function drawScorePanel(ctx, matchState, stageInfo, screenWidth) {
+function drawScorePanel(ctx, matchState, stageInfo, screenWidth, screenHeight = 812) {
   const { playerScore, aiScore, gamesWon, currentGame, currentServer } = matchState;
 
   // 比分面板背景
   const panelWidth = 280;
   const panelHeight = 90;
   const panelX = (screenWidth - panelWidth) / 2;
-  const panelY = 10;
+  // 从原先写死的 10 下移至屏幕 15% 处，避开系统状态栏刘海，也让开 AI 的球拍活动区
+  const panelY = screenHeight * 0.15;
 
   ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
   roundRect(ctx, panelX, panelY, panelWidth, panelHeight, 12);

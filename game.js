@@ -84,10 +84,19 @@ function initGame() {
     console.log('Canvas created:', gameState.canvas);
     gameState.ctx = gameState.canvas.getContext('2d');
 
-    gameState.screenWidth = gameState.canvas.width;
-    gameState.screenHeight = gameState.canvas.height;
+    // 引入高清屏适配：从系统拿到 dpr 和屏幕宽高
+    const sysInfo = wx.getSystemInfoSync ? wx.getSystemInfoSync() : { windowWidth: gameState.canvas.width, windowHeight: gameState.canvas.height, pixelRatio: 1 };
+    gameState.dpr = sysInfo.pixelRatio || 2;
+    
+    // 设置物理像素
+    gameState.canvas.width = sysInfo.windowWidth * gameState.dpr;
+    gameState.canvas.height = sysInfo.windowHeight * gameState.dpr;
 
-    console.log('画布尺寸:', gameState.screenWidth, 'x', gameState.screenHeight);
+    // 设置逻辑像素供游戏体系内使用
+    gameState.screenWidth = sysInfo.windowWidth;
+    gameState.screenHeight = sysInfo.windowHeight;
+
+    console.log('逻辑尺寸:', gameState.screenWidth, 'x', gameState.screenHeight, 'DPR:', gameState.dpr);
 
     // 初始化游戏对象
     initGameObjects();
@@ -125,12 +134,13 @@ function initGameObjects() {
   // 球台
   gameState.table = new Table(screenWidth, screenHeight);
 
-  // 玩家球拍（底部）
-  const playerY = screenHeight * 0.85;
+  // 玩家球拍（底部）适配扩大的球桌
+  const playerY = screenHeight * 0.92;
   gameState.playerPaddle = new Paddle(screenWidth / 2, playerY, false, GAME_CONFIG.PADDLE_WIDTH, GAME_CONFIG.PADDLE_HEIGHT);
+  gameState.touchCurrentX = screenWidth / 2; // 确保初始目标位置正确，防止开局跳动
 
-  // AI球拍（顶部）
-  const aiY = screenHeight * 0.15;
+  // AI球拍（顶部）适配扩大的球桌
+  const aiY = screenHeight * 0.08;
   gameState.aiPaddle = new Paddle(screenWidth / 2, aiY, true, GAME_CONFIG.PADDLE_WIDTH, GAME_CONFIG.PADDLE_HEIGHT);
 
   // AI控制器
@@ -174,10 +184,9 @@ function bindTouchEvents() {
   function handleTouchStart(e) {
     const x = getTouchX(e);
     gameState.touchStartX = x;
-    gameState.touchCurrentX = x;
+    gameState.touchStartPaddleX = gameState.playerPaddle.x; // 记录触摸开始时球拍的位置（用于相对移动）
+    gameState.touchCurrentX = gameState.touchStartPaddleX; // 设置目标为当前球拍位置，防止因绝对坐标发生跳跃（点击闪烁效应）
     gameState.touchMoveX = x;
-    // 记录触摸开始时球拍的位置（用于相对移动）
-    gameState.touchStartPaddleX = gameState.playerPaddle.x;
     gameState.isTouching = true;
 
     // 只在开始界面启动游戏
@@ -386,9 +395,9 @@ function update(deltaTime) {
       }
     }
 
-    // 更新玩家球拍（始终响应触摸）
-    if (gameState.isTouching) {
-      gameState.playerPaddle.update(deltaTime, gameState.touchCurrentX);
+    // 移除 isTouching = true 的限制，允许在手指放开后，球拍继续平滑移动到最后确定的 targetX
+    if (gameState.playerPaddle && gameState.touchCurrentX !== undefined) {
+      gameState.playerPaddle.update(deltaTime, gameState.touchCurrentX, gameState.screenWidth);
     }
 
     // 更新AI
@@ -431,10 +440,15 @@ function checkCollisions() {
  * 渲染游戏
  */
 function render() {
-  const { ctx, screenWidth, screenHeight } = gameState;
+  const { ctx, canvas, dpr, screenWidth, screenHeight } = gameState;
 
-  // 清空画布
-  ctx.clearRect(0, 0, screenWidth, screenHeight);
+  // 使用 setTransform 重置变换，再清空，最后 scale 适配 Retina 屏
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  if (dpr) {
+    ctx.scale(dpr, dpr);
+  }
 
   switch (gameState.gamePhase) {
     case 'start':
@@ -507,7 +521,7 @@ function renderGameplay() {
   drawPointParticles(ctx, gameState.pointParticles);
 
   // 绘制比分面板
-  drawScorePanel(ctx, gameState.match.getState(), gameState.tournament.getCurrentRound(), screenWidth);
+  drawScorePanel(ctx, gameState.match.getState(), gameState.tournament.getCurrentRound(), screenWidth, screenHeight);
 
   // 绘制比赛进度
   drawMatchProgress(ctx, gameState.match.gamesWon, screenWidth, screenHeight);
